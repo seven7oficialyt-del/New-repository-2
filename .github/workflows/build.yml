@@ -1,0 +1,31 @@
+name: Build APK
+on: workflow_dispatch
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: unzip -q Negociador.zip
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17 }
+      - uses: android-actions/setup-android@v3
+      - run: sdkmanager "ndk;26.1.10909125" "cmake;3.22.1"
+      - name: Descargar llama.cpp
+        working-directory: Negociador
+        run: git clone --depth 1 https://github.com/ggml-org/llama.cpp app/src/main/cpp/llama.cpp
+      - name: Descargar sherpa-onnx
+        working-directory: Negociador
+        run: |
+          TAG=$(curl -s https://api.github.com/repos/k2-fsa/sherpa-onnx/releases/latest | grep '"tag_name"' | cut -d'"' -f4)
+          git clone --depth 1 --branch $TAG https://github.com/k2-fsa/sherpa-onnx /tmp/sherpa
+          cp /tmp/sherpa/sherpa-onnx/kotlin-api/*.kt app/src/main/java/com/k2fsa/sherpa/onnx/
+          curl -L -o /tmp/android.tar.bz2 https://github.com/k2-fsa/sherpa-onnx/releases/download/$TAG/sherpa-onnx-$TAG-android.tar.bz2
+          tar xf /tmp/android.tar.bz2 -C /tmp
+          cp /tmp/jniLibs/arm64-v8a/*.so app/src/main/jniLibs/arm64-v8a/
+      - uses: gradle/actions/setup-gradle@v4
+        with: { gradle-version: "8.7" }
+      - name: Compilar
+        working-directory: Negociador
+        run: gradle assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with: { name: Negociador-apk, path: Negociador/app/build/outputs/apk/debug/app-debug.apk }
