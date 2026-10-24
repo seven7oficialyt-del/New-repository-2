@@ -8,8 +8,10 @@ jobs:
       - run: unzip -q Negociador.zip
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: 17 }
-      - uses: android-actions/setup-android@v3
-      - run: sdkmanager "ndk;26.1.10909125" "cmake;3.22.1"
+      - name: Instalar NDK y CMake
+        run: |
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null || true
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "ndk;26.1.10909125" "cmake;3.22.1"
       - name: Descargar llama.cpp
         working-directory: Negociador
         run: git clone --depth 1 https://github.com/ggml-org/llama.cpp app/src/main/cpp/llama.cpp
